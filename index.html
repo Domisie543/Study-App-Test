@@ -206,6 +206,7 @@
   .fb-label.correct-lbl{ color: var(--correct-deep); }
   .fb-value{ font-family: var(--font-body); font-size:18px; color: var(--ink); }
   .fb-value.wrong-val{ text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness:2px; color:#8a4a44; }
+  .fb-value.fuzzy-val{ color: #C99A1E; font-weight:600; }
   .fb-badge{
     display:inline-flex; align-items:center; gap:6px; font-family: var(--font-mono); font-size:12px; font-weight:600;
     letter-spacing:0.5px; padding:5px 10px; border-radius:999px; width:fit-content;
@@ -369,6 +370,29 @@
       .replace(/[.,!?;:'"()\-\u2018\u2019\u201c\u201d]/g, "")
       .replace(/\s+/g, " ")
       .trim();
+  }
+
+  // ---------- Fuzzy matching (Levenshtein edit distance) ----------
+  function levenshtein(a, b){
+    var m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    var prev = new Array(n + 1);
+    var curr = new Array(n + 1);
+    for (var j = 0; j <= n; j++) prev[j] = j;
+    for (var i = 1; i <= m; i++){
+      curr[0] = i;
+      for (j = 1; j <= n; j++){
+        var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+        curr[j] = Math.min(
+          prev[j] + 1,      // deletion
+          curr[j - 1] + 1,  // insertion
+          prev[j - 1] + cost // substitution
+        );
+      }
+      var tmp = prev; prev = curr; curr = tmp;
+    }
+    return prev[n];
   }
 
   // ---------- Shuffle ----------
@@ -609,13 +633,22 @@
   function checkAnswer(){
     var pair = study.pairs[study.currentIndex];
     var userRaw = answerInput.value;
-    var isCorrect = normalize(userRaw) === normalize(pair.a);
+    var userNorm = normalize(userRaw);
+    var correctNorm = normalize(pair.a);
+
+    var exact = userNorm === correctNorm;
+    var fuzzyOk = false;
+    if (!exact && correctNorm.length > 30){
+      fuzzyOk = levenshtein(userNorm, correctNorm) < 5;
+    }
+    var isCorrect = exact || fuzzyOk;
 
     answerRow.style.display = "none";
     feedbackBlock.style.display = "flex";
     fbUserAnswer.textContent = userRaw.trim();
     fbUserAnswer.className = "fb-value" + (isCorrect ? "" : " wrong-val");
     fbCorrectAnswer.textContent = pair.a;
+    fbCorrectAnswer.className = "fb-value" + (fuzzyOk ? " fuzzy-val" : "");
 
     if (isCorrect){
       study.phase = "correct";
