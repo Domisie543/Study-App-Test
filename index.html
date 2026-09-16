@@ -565,7 +565,8 @@
     queue: [],
     currentIndex: null,
     completedThisPass: 0,
-    phase: "ask" // ask | wrong | correct
+    phase: "ask", // ask | wrong | correct
+    lastWrongAnswer: ""
   };
 
   function startDeck(id){
@@ -575,6 +576,7 @@
     study.pairs = deck.pairs;
     study.queue = shuffledIndices(study.pairs.length);
     study.completedThisPass = 0;
+    study.lastWrongAnswer = "";
     pickNext();
     showScreen("study");
   }
@@ -586,19 +588,19 @@
     }
     study.currentIndex = study.queue.pop();
     study.phase = "ask";
-    renderCard();
+    renderCard("");
   }
 
-  function renderCard(){
+  function renderCard(prefillValue){
     var pair = study.pairs[study.currentIndex];
     cardQuestion.textContent = pair.q;
-    answerInput.value = "";
+    answerInput.value = prefillValue || "";
     feedbackBlock.style.display = "none";
     answerRow.style.display = "block";
     submitBtn.style.display = "block";
     submitBtn.textContent = "Check";
     submitBtn.className = "submit-btn";
-    submitBtn.disabled = true;
+    submitBtn.disabled = answerInput.value.trim().length === 0;
 
     var total = study.pairs.length;
     var done = study.completedThisPass;
@@ -606,7 +608,11 @@
     progressFill.style.width = Math.round((done / total) * 100) + "%";
     doneNote.style.display = "none";
 
-    setTimeout(function(){ answerInput.focus(); }, 50);
+    setTimeout(function(){
+      answerInput.focus();
+      var len = answerInput.value.length;
+      answerInput.setSelectionRange(len, len);
+    }, 50);
   }
 
   answerInput.addEventListener("input", function(){
@@ -623,7 +629,7 @@
       checkAnswer();
     } else if (study.phase === "wrong"){
       study.phase = "ask";
-      renderCard();
+      renderCard(study.lastWrongAnswer);
     } else if (study.phase === "correct"){
       study.completedThisPass++;
       pickNext();
@@ -642,6 +648,8 @@
       fuzzyOk = levenshtein(userNorm, correctNorm) < 5;
     }
     var isCorrect = exact || fuzzyOk;
+
+    if (!isCorrect){ study.lastWrongAnswer = userRaw; }
 
     answerRow.style.display = "none";
     feedbackBlock.style.display = "flex";
