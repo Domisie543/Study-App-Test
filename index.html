@@ -204,7 +204,9 @@
   .fb-label{ font-family: var(--font-mono); font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase; }
   .fb-label.you{ color: var(--ink-dim); }
   .fb-label.correct-lbl{ color: var(--correct-deep); }
+  .fb-label.exp-lbl{ color: var(--ink-dim); }
   .fb-value{ font-family: var(--font-body); font-size:18px; color: var(--ink); }
+  .fb-value.fb-explanation{ font-size:15px; font-style:italic; color: var(--ink-dim); line-height:1.5; padding-top:2px; border-top:1px dashed var(--card-line); margin-top:2px; }
   .fb-value.wrong-val{ text-decoration: line-through; text-decoration-color: var(--wrong); text-decoration-thickness:2px; color:#8a4a44; }
   .fb-value.fuzzy-val{ color: #C99A1E; font-weight:600; }
   .fb-badge{
@@ -244,7 +246,7 @@
     <div class="app-title" style="font-size:26px;">New deck</div>
     <div class="app-sub" style="margin-bottom:16px;">import a CSV of questions &amp; answers</div>
     <div class="panel">
-      <p class="hint">Column 1 = question, column 2 = answer. One pair per row.</p>
+      <p class="hint">Column 1 = question, column 2 = answer, column 3 (optional) = explanation. One card per row.</p>
 
       <label class="field-label" for="deck-name-input">Deck name</label>
       <input type="text" id="deck-name-input" placeholder="e.g. Chapter 4 — Chemistry">
@@ -294,6 +296,10 @@
           <div class="fb-row">
             <div class="fb-label correct-lbl">Correct answer</div>
             <div class="fb-value" id="fb-correct-answer"></div>
+          </div>
+          <div class="fb-row" id="fb-explanation-row" style="display:none;">
+            <div class="fb-label exp-lbl">Explanation</div>
+            <div class="fb-value fb-explanation" id="fb-explanation"></div>
           </div>
         </div>
 
@@ -357,8 +363,9 @@
       if (!r || r.length < 2) continue;
       var q = (r[0] || "").trim();
       var a = (r[1] || "").trim();
+      var exp = (r[2] || "").trim();
       if (!q || !a) continue;
-      pairs.push({ q: q, a: a });
+      pairs.push({ q: q, a: a, exp: exp });
     }
     return pairs;
   }
@@ -556,6 +563,8 @@
   var fbBadge = document.getElementById("fb-badge");
   var fbUserAnswer = document.getElementById("fb-user-answer");
   var fbCorrectAnswer = document.getElementById("fb-correct-answer");
+  var fbExplanationRow = document.getElementById("fb-explanation-row");
+  var fbExplanation = document.getElementById("fb-explanation");
   var indexCard = document.getElementById("index-card");
   var doneNote = document.getElementById("done-note");
 
@@ -657,6 +666,12 @@
     fbUserAnswer.className = "fb-value" + (isCorrect ? "" : " wrong-val");
     fbCorrectAnswer.textContent = pair.a;
     fbCorrectAnswer.className = "fb-value" + (fuzzyOk ? " fuzzy-val" : "");
+    if (pair.exp){
+      fbExplanation.textContent = pair.exp;
+      fbExplanationRow.style.display = "flex";
+    } else {
+      fbExplanationRow.style.display = "none";
+    }
 
     if (isCorrect){
       study.phase = "correct";
